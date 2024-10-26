@@ -14,7 +14,7 @@ export class BlockchainController {
     private readonly redisProvider: RedisProvider,
   ) {}
 
-  @Post('nonces')
+  @Post('nonce')
   @UsePipes(new JoiValidationPipe(generateNonceSchema))
   async generateNonce(@Body() generateNonceDTO: GenerateNonceDTO) {
     const nonce = await this.redisProvider.getCachedValue(
