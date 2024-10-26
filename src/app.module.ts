@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from './providers/cache/redis.module';
 
 import { AuthModule } from './app/auth/auth.module';
@@ -12,6 +13,12 @@ import { APIConfig, CacheConfig, DatabaseConfig } from './config';
     ConfigModule.forRoot({
       load: [APIConfig, DatabaseConfig, CacheConfig],
       isGlobal: true,
+    }),
+    MongooseModule.forRootAsync({
+      useFactory: async (configService: ConfigService) => ({
+        uri: configService.get<string>('MONGO.URI'),
+      }),
+      inject: [ConfigService],
     }),
     RedisModule,
     AuthModule,
