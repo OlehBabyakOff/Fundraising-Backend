@@ -70,33 +70,6 @@ export class AuthService {
 
     const tokens = await this.getTokens(signInDTO.wallet);
 
-    const userSession = await this.redisProvider.getValue(
-      this.redisProvider.buildCacheKey({
-        scope: 'Auth',
-        entity: 'AccessToken',
-        identifiers: [
-          this.redisProvider.hashIdentifiers({
-            wallet: signInDTO.wallet,
-          }),
-        ],
-      }),
-    );
-
-    // destroy old auth session (access and refresh tokens)
-    if (userSession) {
-      await this.redisProvider.deleteKeysByPattern(
-        this.redisProvider.buildCacheKey({
-          scope: 'Auth',
-          entity: '*',
-          identifiers: [
-            this.redisProvider.hashIdentifiers({
-              wallet: signInDTO.wallet,
-            }),
-          ],
-        }),
-      );
-    }
-
     await Promise.all([
       this.redisProvider.setKeyWithExpire(
         this.redisProvider.buildCacheKey({
