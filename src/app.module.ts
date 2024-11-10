@@ -1,17 +1,18 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { RedisModule } from './providers/cache/redis.module';
 
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
 
-import { APIConfig, CacheConfig, DatabaseConfig } from './config';
+import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
+import { RedisModule } from './providers/cache/redis.module';
+import { EthersModule } from './providers/ethers/ethers.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      load: [APIConfig, DatabaseConfig, CacheConfig],
+      load: [APIConfig, DatabaseConfig, CacheConfig, EthersConfig],
       isGlobal: true,
     }),
     MongooseModule.forRootAsync({
@@ -21,6 +22,7 @@ import { APIConfig, CacheConfig, DatabaseConfig } from './config';
       inject: [ConfigService],
     }),
     RedisModule,
+    EthersModule,
     AuthModule,
     UserModule,
   ],

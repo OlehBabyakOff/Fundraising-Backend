@@ -4,8 +4,11 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { RedisProvider } from 'src/providers/cache/redis.provider';
+import { EthersProvider } from 'src/providers/ethers/ethers.provider';
+
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+
 import { SignInDTO } from './DTO/sign-in.dto';
 
 @Injectable()
@@ -14,6 +17,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redisProvider: RedisProvider,
+    private readonly ethersProvider: EthersProvider,
   ) {}
 
   async signIn(signInDTO: SignInDTO): Promise<{
@@ -22,12 +26,10 @@ export class AuthService {
   }> {
     const verifyMessage = `Please sign this message to authenticate: ${signInDTO.nonce}`;
 
-    const signerAddress = ''; // todo update with verifyMessage from ethers/web3
-
-    // const signerAddress = ethers.utils.verifyMessage(
-    //   verifyMessage,
-    //   signInDTO.signature,
-    // );
+    const signerAddress = this.ethersProvider.verifyMessage(
+      verifyMessage,
+      signInDTO.signature,
+    );
 
     if (signerAddress.toLowerCase() !== signInDTO.wallet.toLowerCase()) {
       throw new BadRequestException("Wallet addresses doesn't match");
@@ -52,6 +54,19 @@ export class AuthService {
     if (userNonce !== signInDTO.nonce) {
       throw new BadRequestException('Nonce mismatch');
     }
+
+    // remove nonce after validation to prevent from replay attacks
+    await this.redisProvider.deleteKeysByPattern(
+      this.redisProvider.buildCacheKey({
+        scope: 'User',
+        entity: 'Nonce',
+        identifiers: [
+          this.redisProvider.hashIdentifiers({
+            wallet: signInDTO.wallet,
+          }),
+        ],
+      }),
+    );
 
     const tokens = await this.getTokens(signInDTO.wallet);
 
@@ -130,19 +145,6 @@ export class AuthService {
     if (decodedRefreshToken.wallet !== walletAddress) {
       throw new ForbiddenException('Invalid refresh token for this wallet.');
     }
-
-    // destroy old auth session (access and refresh tokens)
-    await this.redisProvider.deleteKeysByPattern(
-      this.redisProvider.buildCacheKey({
-        scope: 'Auth',
-        entity: '*',
-        identifiers: [
-          this.redisProvider.hashIdentifiers({
-            wallet: walletAddress,
-          }),
-        ],
-      }),
-    );
 
     const tokens = await this.getTokens(walletAddress);
 

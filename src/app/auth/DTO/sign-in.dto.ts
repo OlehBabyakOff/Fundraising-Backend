@@ -14,9 +14,7 @@ export const signInSchema = Joi.object({
     .required(),
 
   signature: Joi.string()
-    .pattern(/^[a-fA-F0-9]+$/)
-    .min(130)
-    .max(132)
+    .pattern(/^0x[a-fA-F0-9]{130,132}$/)
     .required(),
 
   nonce: Joi.string()
