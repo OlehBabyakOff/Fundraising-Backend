@@ -60,7 +60,7 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  // For tests
+  // For testing
   // async signMessageWithBackend(nonce) {
   //   const message = `Please sign this message to authenticate: ${nonce}`;
 
