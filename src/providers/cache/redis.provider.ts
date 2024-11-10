@@ -95,7 +95,7 @@ export class RedisProvider implements OnModuleDestroy {
     const value = await this.redisClient.get(key);
 
     if (value) {
-      return JSON.parse(value);
+      return typeof value === 'string' ? value : JSON.parse(value);
     }
 
     const result = await callback();
@@ -133,10 +133,27 @@ export class RedisProvider implements OnModuleDestroy {
     return this.redisClient.get(key);
   }
 
-  async remapRelation(relations, identifiers = {}) {
-    return relations.map((relation) => {
-      return relation(identifiers);
-    });
+  async deleteKeysByPattern(pattern: string): Promise<number> {
+    let cursor = '0';
+    let deletedCount = 0;
+
+    do {
+      const [newCursor, keys] = await this.redisClient.scan(
+        cursor,
+        'MATCH',
+        pattern,
+      );
+
+      if (keys.length > 0) {
+        const result = await this.redisClient.del(...keys);
+
+        deletedCount += result;
+      }
+
+      cursor = newCursor;
+    } while (cursor !== '0');
+
+    return deletedCount;
   }
 
   async onModuleDestroy() {

@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from './providers/cache/redis.module';
 
 import { AuthModule } from './app/auth/auth.module';
-import { BlockchainModule } from './app/blockchain/blockchain.module';
+import { UserModule } from './app/user/user.module';
 
 import { APIConfig, CacheConfig, DatabaseConfig } from './config';
 
@@ -22,7 +22,7 @@ import { APIConfig, CacheConfig, DatabaseConfig } from './config';
     }),
     RedisModule,
     AuthModule,
-    BlockchainModule,
+    UserModule,
   ],
   controllers: [],
   providers: [],
