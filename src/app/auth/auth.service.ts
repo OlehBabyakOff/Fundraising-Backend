@@ -35,7 +35,7 @@ export class AuthService {
 
     const userNonce = await this.redisProvider.getValue(
       this.redisProvider.buildCacheKey({
-        scope: 'Blockchain',
+        scope: 'User',
         entity: 'Nonce',
         identifiers: [
           this.redisProvider.hashIdentifiers({

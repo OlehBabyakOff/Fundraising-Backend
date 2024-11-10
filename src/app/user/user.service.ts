@@ -9,7 +9,7 @@ export class UserService {
   async generateNonce(wallet: string): Promise<string> {
     const nonce = await this.redisProvider.getCachedValue(
       this.redisProvider.buildCacheKey({
-        scope: 'Blockchain',
+        scope: 'User',
         entity: 'Nonce',
         identifiers: [
           this.redisProvider.hashIdentifiers({
