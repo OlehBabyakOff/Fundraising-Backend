@@ -1,3 +1,5 @@
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   BadRequestException,
   Injectable,
@@ -14,10 +16,19 @@ export class EthersProvider implements OnModuleDestroy {
   private signer: ethers.Wallet;
   private factoryContract: ethers.Contract;
 
+  private factoryABI: ethers.InterfaceAbi;
+  private campaignABI: ethers.InterfaceAbi;
+
   constructor(private configService: ConfigService) {
     this.provider = this.createProvider();
     this.signer = this.createSigner();
     this.factoryContract = this.createFactoryContract();
+
+    const factoryAbiPath = path.join(__dirname, './abi/CampaignFactory.json');
+    const campaignAbiPath = path.join(__dirname, './abi/Campaign.json');
+
+    this.factoryABI = JSON.parse(fs.readFileSync(factoryAbiPath, 'utf8')).abi;
+    this.campaignABI = JSON.parse(fs.readFileSync(campaignAbiPath, 'utf8')).abi;
   }
 
   private createProvider(): ethers.JsonRpcProvider {
@@ -47,13 +58,11 @@ export class EthersProvider implements OnModuleDestroy {
       'ETHEREUM.FACTORY_ADDRESS',
     );
 
-    const factoryAbi = this.configService.get<any[]>('ETHEREUM.FACTORY_ABI');
-
-    if (!factoryAddress || !factoryAbi) {
+    if (!factoryAddress || !this.factoryABI) {
       throw new Error('Factory contract address or ABI not defined');
     }
 
-    return new ethers.Contract(factoryAddress, factoryAbi, this.signer);
+    return new ethers.Contract(factoryAddress, this.factoryABI, this.signer);
   }
 
   async getBalance(address: string): Promise<string> {
@@ -121,13 +130,12 @@ export class EthersProvider implements OnModuleDestroy {
 
   async donateToCampaign(
     campaignAddress: string,
-    abi: any[],
     amount: string,
   ): Promise<any> {
     try {
       const campaignContract = new ethers.Contract(
         campaignAddress,
-        abi,
+        this.campaignABI,
         this.signer,
       );
 
@@ -150,11 +158,11 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async refundFromCampaign(campaignAddress: string, abi: any[]): Promise<any> {
+  async refundFromCampaign(campaignAddress: string): Promise<any> {
     try {
       const campaignContract = new ethers.Contract(
         campaignAddress,
-        abi,
+        this.campaignABI,
         this.signer,
       );
 
@@ -176,14 +184,11 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async releaseFundsFromCampaign(
-    campaignAddress: string,
-    abi: any[],
-  ): Promise<any> {
+  async releaseFundsFromCampaign(campaignAddress: string): Promise<any> {
     try {
       const campaignContract = new ethers.Contract(
         campaignAddress,
-        abi,
+        this.campaignABI,
         this.signer,
       );
 
@@ -205,11 +210,11 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async endCampaign(campaignAddress: string, abi: any[]): Promise<any> {
+  async endCampaign(campaignAddress: string): Promise<any> {
     try {
       const campaignContract = new ethers.Contract(
         campaignAddress,
-        abi,
+        this.campaignABI,
         this.signer,
       );
 
@@ -228,11 +233,11 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async getCampaignStatus(campaignAddress: string, abi: any[]): Promise<any> {
+  async getCampaignStatus(campaignAddress: string): Promise<any> {
     try {
       const campaignContract = new ethers.Contract(
         campaignAddress,
-        abi,
+        this.campaignABI,
         this.provider,
       );
 
