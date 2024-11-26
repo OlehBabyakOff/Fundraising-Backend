@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { RedisProvider } from 'src/providers/cache/redis.provider';
 import { EthersProvider } from 'src/providers/ethers/ethers.provider';
@@ -9,7 +10,7 @@ import { EthersProvider } from 'src/providers/ethers/ethers.provider';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 
-import { SignInDTO } from './DTO/sign-in.dto';
+import { RefreshDTO, SignInDTO } from './DTO/sign-in.dto';
 
 @Injectable()
 export class AuthService {
@@ -70,33 +71,6 @@ export class AuthService {
 
     const tokens = await this.getTokens(signInDTO.wallet);
 
-    const userSession = await this.redisProvider.getValue(
-      this.redisProvider.buildCacheKey({
-        scope: 'Auth',
-        entity: 'AccessToken',
-        identifiers: [
-          this.redisProvider.hashIdentifiers({
-            wallet: signInDTO.wallet,
-          }),
-        ],
-      }),
-    );
-
-    // destroy old auth session (access and refresh tokens)
-    if (userSession) {
-      await this.redisProvider.deleteKeysByPattern(
-        this.redisProvider.buildCacheKey({
-          scope: 'Auth',
-          entity: '*',
-          identifiers: [
-            this.redisProvider.hashIdentifiers({
-              wallet: signInDTO.wallet,
-            }),
-          ],
-        }),
-      );
-    }
-
     await Promise.all([
       this.redisProvider.setKeyWithExpire(
         this.redisProvider.buildCacheKey({
@@ -135,49 +109,61 @@ export class AuthService {
   }
 
   async refreshTokens(
-    walletAddress: string,
-    refreshToken: string,
+    refreshDTO: RefreshDTO,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const decodedRefreshToken = this.jwtService.verify(refreshToken, {
-      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
-    });
+    try {
+      const decodedRefreshToken = this.jwtService.verify(
+        refreshDTO.refreshToken,
+        {
+          secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        },
+      );
 
-    if (decodedRefreshToken.wallet !== walletAddress) {
-      throw new ForbiddenException('Invalid refresh token for this wallet.');
+      if (decodedRefreshToken.wallet !== refreshDTO.wallet) {
+        throw new ForbiddenException('Invalid refresh token for this wallet.');
+      }
+
+      const tokens = await this.getTokens(refreshDTO.wallet);
+
+      await Promise.all([
+        this.redisProvider.setKeyWithExpire(
+          this.redisProvider.buildCacheKey({
+            scope: 'Auth',
+            entity: 'AccessToken',
+            identifiers: [
+              this.redisProvider.hashIdentifiers({
+                wallet: refreshDTO.wallet,
+              }),
+            ],
+          }),
+          tokens.accessToken,
+          this.configService.get<number>('JWT_ACCESS_TTL'),
+        ),
+        this.redisProvider.setKeyWithExpire(
+          this.redisProvider.buildCacheKey({
+            scope: 'Auth',
+            entity: 'RefreshToken',
+            identifiers: [
+              this.redisProvider.hashIdentifiers({
+                wallet: refreshDTO.wallet,
+              }),
+            ],
+          }),
+          tokens.refreshToken,
+          this.configService.get<number>('JWT_REFRESH_TTL'),
+        ),
+      ]);
+
+      return tokens;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
+        throw new ForbiddenException('Refresh token has expired.');
+      }
+
+      throw new InternalServerErrorException(
+        'An error occurred while refreshing the token.',
+      );
     }
-
-    const tokens = await this.getTokens(walletAddress);
-
-    await Promise.all([
-      this.redisProvider.setKeyWithExpire(
-        this.redisProvider.buildCacheKey({
-          scope: 'Auth',
-          entity: 'AccessToken',
-          identifiers: [
-            this.redisProvider.hashIdentifiers({
-              wallet: walletAddress,
-            }),
-          ],
-        }),
-        tokens.accessToken,
-        this.configService.get<number>('JWT_ACCESS_TTL'),
-      ),
-      this.redisProvider.setKeyWithExpire(
-        this.redisProvider.buildCacheKey({
-          scope: 'Auth',
-          entity: 'RefreshToken',
-          identifiers: [
-            this.redisProvider.hashIdentifiers({
-              wallet: walletAddress,
-            }),
-          ],
-        }),
-        tokens.refreshToken,
-        this.configService.get<number>('JWT_REFRESH_TTL'),
-      ),
-    ]);
-
-    return tokens;
   }
 
   private async getTokens(
