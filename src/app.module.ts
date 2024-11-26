@@ -7,6 +7,7 @@ import { RedisModule } from './providers/cache/redis.module';
 import { EthersModule } from './providers/ethers/ethers.module';
 import { PinataModule } from './providers/pinata/pinata.module';
 import { CronjobModule } from './providers/cronjob/cronjob.module';
+import { WebSocketModule } from './providers/websocket/websocket.module';
 
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
@@ -31,6 +32,7 @@ import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
       inject: [ConfigService],
     }),
     RedisModule,
+    WebSocketModule,
     CronjobModule,
     PinataModule,
     EthersModule,
