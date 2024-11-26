@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { MulterModule } from '@nestjs/platform-express';
+
 import { RedisModule } from './providers/cache/redis.module';
 import { EthersModule } from './providers/ethers/ethers.module';
 import { PinataModule } from './providers/pinata/pinata.module';
-import { MulterModule } from '@nestjs/platform-express';
+import { CronjobModule } from './providers/cronjob/cronjob.module';
 
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
@@ -29,6 +31,7 @@ import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
       inject: [ConfigService],
     }),
     RedisModule,
+    CronjobModule,
     PinataModule,
     EthersModule,
     AuthModule,
