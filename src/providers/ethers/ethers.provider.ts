@@ -16,19 +16,19 @@ export class EthersProvider implements OnModuleDestroy {
   private signer: ethers.Wallet;
   private factoryContract: ethers.Contract;
 
-  private factoryABI: ethers.InterfaceAbi;
-  private campaignABI: ethers.InterfaceAbi;
+  private campaignABI: ethers.InterfaceAbi = JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), '/src/providers/ethers/abi/Campaign.json'),
+      {
+        encoding: 'utf8',
+      },
+    ),
+  ).abi;
 
   constructor(private configService: ConfigService) {
     this.provider = this.createProvider();
     this.signer = this.createSigner();
     this.factoryContract = this.createFactoryContract();
-
-    const factoryAbiPath = path.join(__dirname, './abi/CampaignFactory.json');
-    const campaignAbiPath = path.join(__dirname, './abi/Campaign.json');
-
-    this.factoryABI = JSON.parse(fs.readFileSync(factoryAbiPath, 'utf8')).abi;
-    this.campaignABI = JSON.parse(fs.readFileSync(campaignAbiPath, 'utf8')).abi;
   }
 
   private createProvider(): ethers.JsonRpcProvider {
@@ -58,11 +58,23 @@ export class EthersProvider implements OnModuleDestroy {
       'ETHEREUM.FACTORY_ADDRESS',
     );
 
-    if (!factoryAddress || !this.factoryABI) {
+    const factoryABI = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          process.cwd(),
+          '/src/providers/ethers/abi/CampaignFactory.json',
+        ),
+        {
+          encoding: 'utf8',
+        },
+      ),
+    ).abi;
+
+    if (!factoryAddress || !factoryABI) {
       throw new Error('Factory contract address or ABI not defined');
     }
 
-    return new ethers.Contract(factoryAddress, this.factoryABI, this.signer);
+    return new ethers.Contract(factoryAddress, factoryABI, this.signer);
   }
 
   async getBalance(address: string): Promise<string> {

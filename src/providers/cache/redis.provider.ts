@@ -19,8 +19,6 @@ export class RedisProvider implements OnModuleDestroy {
     );
     const retryDelay = this.configService.get<number>('REDIS.RETRY_DELAY');
 
-    console.log(retryAttempts);
-
     // CLUSTER CONFIGURATION
     if (clusterNodes) {
       const nodes = clusterNodes.split(',').map((node) => {
