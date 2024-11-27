@@ -108,6 +108,37 @@ export class AuthService {
     };
   }
 
+  async signOut(walletAddress: string): Promise<void> {
+    if (!walletAddress) {
+      throw new BadRequestException('Wallet address is required');
+    }
+
+    await Promise.all([
+      this.redisProvider.deleteKeysByPattern(
+        this.redisProvider.buildCacheKey({
+          scope: 'Auth',
+          entity: 'AccessToken',
+          identifiers: [
+            this.redisProvider.hashIdentifiers({
+              wallet: walletAddress,
+            }),
+          ],
+        }),
+      ),
+      this.redisProvider.deleteKeysByPattern(
+        this.redisProvider.buildCacheKey({
+          scope: 'Auth',
+          entity: 'RefreshToken',
+          identifiers: [
+            this.redisProvider.hashIdentifiers({
+              wallet: walletAddress,
+            }),
+          ],
+        }),
+      ),
+    ]);
+  }
+
   async refreshTokens(
     refreshDTO: RefreshDTO,
   ): Promise<{ accessToken: string; refreshToken: string }> {

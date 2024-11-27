@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards, UsePipes } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  UsePipes,
+  Request,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JoiValidationPipe } from 'src/common/pipes/joi-validation.pipe';
 import {
@@ -8,6 +15,7 @@ import {
   RefreshDTO,
 } from './DTO/sign-in.dto';
 import { RefreshTokenGuard } from 'src/common/guards/refreshToken.guard';
+import { AccessTokenGuard } from 'src/common/guards/accessToken.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -31,5 +39,13 @@ export class AuthController {
     const tokens = await this.authService.refreshTokens(refreshDTO);
 
     return tokens;
+  }
+
+  @Post('sign-out')
+  @UseGuards(AccessTokenGuard)
+  async signOut(@Request() req) {
+    await this.authService.signOut(req.user.walletAddress);
+
+    return { message: 'Successfully logged out' };
   }
 }
