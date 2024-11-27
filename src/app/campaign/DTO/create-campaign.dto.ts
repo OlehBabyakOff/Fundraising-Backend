@@ -22,12 +22,12 @@ export const createCampaignSchema = Joi.object({
     'any.required': 'Goal amount is required',
   }),
 
-  endDate: Joi.number().required(),
+  endDate: Joi.string().required(),
 });
 
 export class CreateCampaignDTO {
   title: string;
   description: string;
   goalAmount: number;
-  endDate: number;
+  endDate: string;
 }

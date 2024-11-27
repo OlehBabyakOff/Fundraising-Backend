@@ -104,7 +104,7 @@ export class EthersProvider implements OnModuleDestroy {
     description: string,
     image: string,
     goalAmount: number,
-    endDate: number,
+    endDate: string,
   ): Promise<string> {
     return new Promise(async (resolve, reject) => {
       try {
@@ -113,12 +113,14 @@ export class EthersProvider implements OnModuleDestroy {
           resolve(campaignAddress);
         });
 
+        const endDateInMilliseconds = new Date(endDate).getTime();
+
         const tx = await this.factoryContract.createCampaign(
           title,
           description,
           image,
           ethers.parseEther(goalAmount.toString()),
-          endDate,
+          endDateInMilliseconds,
         );
 
         await tx.wait();
