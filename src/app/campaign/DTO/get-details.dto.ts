@@ -1,7 +1,7 @@
 import * as Joi from 'joi';
 
 export const getDetailsSchema = Joi.object({
-  wallet: Joi.alternatives()
+  address: Joi.alternatives()
     .try(
       Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/), // Ethereum
       Joi.string().pattern(
@@ -15,5 +15,5 @@ export const getDetailsSchema = Joi.object({
 });
 
 export class GetDetailsDTO {
-  wallet: string;
+  address: string;
 }

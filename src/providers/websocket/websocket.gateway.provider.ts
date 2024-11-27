@@ -10,6 +10,7 @@ import { Injectable, Logger } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ethers } from 'ethers';
 
 @Injectable()
 @WebSocketGateway({
@@ -28,6 +29,13 @@ export class WebSocketGatewayProvider
 
   @WebSocketServer()
   server: Server;
+
+  private addressToSocketMap = new Map<string, string>();
+
+  constructor(jwtService: JwtService, configService: ConfigService) {
+    this.jwtService = jwtService;
+    this.configService = configService;
+  }
 
   async handleConnection(client: Socket) {
     try {
@@ -53,6 +61,11 @@ export class WebSocketGatewayProvider
         return client.disconnect(true);
       }
 
+      this.addressToSocketMap.set(
+        decoded.walletAddress.toLowerCase(),
+        client.id,
+      );
+
       client.data.user = decoded;
 
       this.logger.log(
@@ -68,27 +81,28 @@ export class WebSocketGatewayProvider
   }
 
   handleDisconnect(client: Socket) {
-    this.logger.log(`Client disconnected: ${client.id}`);
-  }
+    const userAddress = [...this.addressToSocketMap.entries()].find(
+      ([_, socketId]) => socketId === client.id,
+    )?.[0];
 
-  @SubscribeMessage('notification')
-  handleNotification(client: Socket, payload: any) {
-    this.logger.log(
-      `Received notification from ${client.id}: ${JSON.stringify(payload)}`,
-    );
-  }
-
-  sendNotification(clientId: string, message: string) {
-    const client = this.server.sockets.sockets.get(clientId);
-
-    if (client) {
-      client.emit('notification', { message });
+    if (userAddress) {
+      this.addressToSocketMap.delete(userAddress);
+      this.logger.log(
+        `Client disconnected: ${client.id}, Wallet: ${userAddress}`,
+      );
     } else {
-      this.logger.warn(`Client with ID ${clientId} not found.`);
+      this.logger.log(`Client disconnected: ${client.id}`);
     }
   }
 
-  broadcastNotification(message: string) {
-    this.server.emit('notification', { message });
+  async notifyDonationEvent(donor: string, amount: string) {
+    const donorSocketId = this.addressToSocketMap.get(donor.toLowerCase());
+
+    if (donorSocketId) {
+      this.server.to(donorSocketId).emit('donationReceived', {
+        role: 'donor',
+        amount,
+      });
+    }
   }
 }

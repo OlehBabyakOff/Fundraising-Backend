@@ -23,6 +23,8 @@ import {
 
 import { GetDetailsDTO, getDetailsSchema } from './DTO/get-details.dto';
 
+import { DonateDTO, donateSchema } from './DTO/donate.dto';
+
 @Controller('campaign')
 export class CampaignController {
   constructor(private readonly campaignService: CampaignService) {}
@@ -47,10 +49,19 @@ export class CampaignController {
     return result;
   }
 
-  @Get('details/:wallet')
+  @Get('details/:address')
   @UsePipes(new JoiValidationPipe(getDetailsSchema))
   async getDetails(@Param() dto: GetDetailsDTO) {
-    const result = await this.campaignService.getDetails(dto.wallet);
+    const result = await this.campaignService.getDetails(dto.address);
+
+    return result;
+  }
+
+  @Post('donate/:address')
+  @UseGuards(AccessTokenGuard)
+  @UsePipes(new JoiValidationPipe(donateSchema))
+  async donate(@Body() dto: DonateDTO, @Param() param) {
+    const result = await this.campaignService.donate(param.address, dto);
 
     return result;
   }

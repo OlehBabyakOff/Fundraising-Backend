@@ -4,6 +4,7 @@ import { RedisProvider } from 'src/providers/cache/redis.provider';
 import { CreateCampaignDTO } from './DTO/create-campaign.dto';
 import { PinataProvider } from 'src/providers/pinata/pinata.provider';
 import { EthersProvider } from 'src/providers/ethers/ethers.provider';
+import { DonateDTO } from './DTO/donate.dto';
 
 @Injectable()
 export class CampaignService {
@@ -46,5 +47,22 @@ export class CampaignService {
     const result = await this.ethersProvider.getCampaignDetails(address);
 
     return result;
+  }
+
+  async donate(address: string, dto: DonateDTO) {
+    try {
+      const { amount } = dto;
+
+      const result = await this.ethersProvider.donateToCampaign(
+        address,
+        amount,
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Error while donating:', error.message);
+
+      throw new Error(`Could not donate to campaign: ${error.message}`);
+    }
   }
 }

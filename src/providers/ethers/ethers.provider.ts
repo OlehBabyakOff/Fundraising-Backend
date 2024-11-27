@@ -8,10 +8,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
+import { WebSocketGatewayProvider } from '../websocket/websocket.gateway.provider';
 
 @Injectable()
 export class EthersProvider implements OnModuleDestroy {
   private readonly logger = new Logger(EthersProvider.name);
+  private readonly wsProvider: WebSocketGatewayProvider;
+
   private provider: ethers.JsonRpcProvider;
   private signer: ethers.Wallet;
   private factoryContract: ethers.Contract;
@@ -114,7 +117,7 @@ export class EthersProvider implements OnModuleDestroy {
           title,
           description,
           image,
-          goalAmount,
+          ethers.parseEther(goalAmount.toString()),
           endDate,
         );
 
@@ -144,8 +147,8 @@ export class EthersProvider implements OnModuleDestroy {
         title: item[2],
         description: item[3],
         image: item[4],
-        goalAmount: Number(item[5].toString()),
-        totalContributed: Number(item[6].toString()),
+        goalAmount: ethers.formatEther(item[5]),
+        totalContributed: ethers.formatEther(item[6]),
         endDate: Number(item[7].toString()),
       }));
 
@@ -183,7 +186,6 @@ export class EthersProvider implements OnModuleDestroy {
       });
 
       const receipt = await tx.wait();
-      // Listen for DonationReceived event
 
       this.listenForDonationEvent(campaignContract);
       return receipt;
@@ -313,8 +315,8 @@ export class EthersProvider implements OnModuleDestroy {
         title: details[1],
         description: details[2],
         image: details[3],
-        goalAmount: Number(details[4].toString()),
-        totalContributed: Number(details[5].toString()),
+        goalAmount: ethers.formatEther(details[4]),
+        totalContributed: ethers.formatEther(details[5]),
         endDate: Number(details[6].toString()),
       };
 
@@ -354,10 +356,10 @@ export class EthersProvider implements OnModuleDestroy {
     return { account: this.signer.address, signature };
   }
 
-  // Event listeners
-
   private listenForDonationEvent(campaignContract: ethers.Contract) {
     campaignContract.on('DonationReceived', (donor, amount) => {
+      this.wsProvider.notifyDonationEvent(donor, ethers.formatEther(amount));
+
       this.logger.log(
         `Donation received from ${donor} of ${ethers.formatEther(amount)} ETH`,
       );
