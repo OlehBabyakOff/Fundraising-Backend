@@ -158,6 +158,26 @@
               "internalType": "uint256",
               "name": "endDate",
               "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "isGoalMet",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "isCampaignEnded",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "isFundsReleased",
+              "type": "bool"
+            },
+            {
+              "internalType": "bool",
+              "name": "isFundsRefunded",
+              "type": "bool"
             }
           ],
           "internalType": "struct CampaignFactory.CampaignDetails[]",

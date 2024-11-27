@@ -150,6 +150,10 @@ export class EthersProvider implements OnModuleDestroy {
         goalAmount: ethers.formatEther(item[5]),
         totalContributed: ethers.formatEther(item[6]),
         endDate: Number(item[7].toString()),
+        isGoalMet: item[8],
+        isCampaignEnded: item[9],
+        isReleased: item[10],
+        isRefunded: item[11],
       }));
 
       return { data: formattedResult, total: formattedResult.length };
@@ -207,14 +211,21 @@ export class EthersProvider implements OnModuleDestroy {
         this.signer,
       );
 
-      const tx = await campaignContract.refund();
+      const details = await this.getCampaignDetails(campaignAddress);
 
-      const receipt = await tx.wait();
+      if (
+        !details.isRefunded &&
+        details.isCampaignEnded &&
+        !details.isGoalMet
+      ) {
+        const tx = await campaignContract.refund();
 
-      // Listen for RefundIssued event
-      this.listenForRefundEvent(campaignContract);
+        const receipt = await tx.wait();
 
-      return receipt;
+        this.listenForRefundEvent(campaignContract);
+
+        return receipt;
+      }
     } catch (error) {
       this.logger.error(
         `Failed to get refund from campaign ${campaignAddress}`,
@@ -233,14 +244,17 @@ export class EthersProvider implements OnModuleDestroy {
         this.signer,
       );
 
-      const tx = await campaignContract.releaseFunds();
+      const details = await this.getCampaignDetails(campaignAddress);
 
-      const receipt = await tx.wait();
+      if (!details.isReleased && details.isGoalMet && details.isCampaignEnded) {
+        const tx = await campaignContract.releaseFunds();
 
-      // Listen for FundsReleased event
-      this.listenForFundsReleasedEvent(campaignContract);
+        const receipt = await tx.wait();
 
-      return receipt;
+        this.listenForFundsReleasedEvent(campaignContract);
+
+        return receipt;
+      }
     } catch (error) {
       this.logger.error(
         `Failed to release funds from campaign ${campaignAddress}`,
@@ -259,11 +273,21 @@ export class EthersProvider implements OnModuleDestroy {
         this.signer,
       );
 
-      const tx = await campaignContract.endCampaign();
+      const details = await this.getCampaignDetails(campaignAddress);
 
-      const receipt = await tx.wait();
+      if (
+        !details.isCampaignEnded &&
+        !details.isGoalMet &&
+        details.endDate < Date.now() &&
+        !details.isRefunded &&
+        !details.isReleased
+      ) {
+        const tx = await campaignContract.endCampaign();
 
-      return receipt;
+        const receipt = await tx.wait();
+
+        return receipt;
+      }
     } catch (error) {
       this.logger.error(
         `Failed to end campaign ${campaignAddress}`,
@@ -318,6 +342,10 @@ export class EthersProvider implements OnModuleDestroy {
         goalAmount: ethers.formatEther(details[4]),
         totalContributed: ethers.formatEther(details[5]),
         endDate: Number(details[6].toString()),
+        isGoalMet: details[7],
+        isCampaignEnded: details[8],
+        isReleased: details[9],
+        isRefunded: details[10],
       };
 
       return decodedDetails;
@@ -368,6 +396,8 @@ export class EthersProvider implements OnModuleDestroy {
 
   private listenForRefundEvent(campaignContract: ethers.Contract) {
     campaignContract.on('RefundIssued', (donor, amount) => {
+      this.wsProvider.notifyRefundEvent(donor, ethers.formatEther(amount));
+
       this.logger.log(
         `Refund issued to ${donor} of ${ethers.formatEther(amount)} ETH`,
       );
@@ -375,7 +405,9 @@ export class EthersProvider implements OnModuleDestroy {
   }
 
   private listenForFundsReleasedEvent(campaignContract: ethers.Contract) {
-    campaignContract.on('FundsReleased', (amount) => {
+    campaignContract.on('FundsReleased', (creator, amount) => {
+      this.wsProvider.notifyReleaseEvent(creator, ethers.formatEther(amount));
+
       this.logger.log(`Funds released: ${ethers.formatEther(amount)} ETH`);
     });
   }

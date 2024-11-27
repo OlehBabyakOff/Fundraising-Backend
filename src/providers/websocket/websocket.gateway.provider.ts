@@ -105,4 +105,26 @@ export class WebSocketGatewayProvider
       });
     }
   }
+
+  async notifyRefundEvent(donor: string, amount: string) {
+    const donorSocketId = this.addressToSocketMap.get(donor.toLowerCase());
+
+    if (donorSocketId) {
+      this.server.to(donorSocketId).emit('refundIssued', {
+        role: 'donor',
+        amount,
+      });
+    }
+  }
+
+  async notifyReleaseEvent(creator: string, amount: string) {
+    const creatorSocketId = this.addressToSocketMap.get(creator.toLowerCase());
+
+    if (creatorSocketId) {
+      this.server.to(creatorSocketId).emit('fundsReleased', {
+        role: 'creator',
+        amount,
+      });
+    }
+  }
 }
