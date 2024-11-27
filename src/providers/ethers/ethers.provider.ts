@@ -135,11 +135,11 @@ export class EthersProvider implements OnModuleDestroy {
   }
 
   async getCampaigns(
-    startIndex: number,
-    limit: number,
+    start: number,
+    end: number,
   ): Promise<{ data: []; total: number }> {
     try {
-      const result = await this.factoryContract.getCampaigns(startIndex, limit);
+      const result = await this.factoryContract.getCampaigns(start, end);
 
       const formattedResult = result.map((item) => ({
         campaignAddress: item[0],

@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UsePipes,
@@ -43,8 +44,8 @@ export class CampaignController {
   }
 
   @Get('list')
-  async getList() {
-    const result = await this.campaignService.getList();
+  async getList(@Query() query) {
+    const result = await this.campaignService.getList(query);
 
     return result;
   }
@@ -53,6 +54,13 @@ export class CampaignController {
   @UsePipes(new JoiValidationPipe(getDetailsSchema))
   async getDetails(@Param() dto: GetDetailsDTO) {
     const result = await this.campaignService.getDetails(dto.address);
+
+    return result;
+  }
+
+  @Get('slider')
+  async getSlider() {
+    const result = await this.campaignService.getSlider();
 
     return result;
   }
