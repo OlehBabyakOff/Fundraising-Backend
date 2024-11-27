@@ -1,9 +1,12 @@
 export const EthersConfig = () => ({
   ETHEREUM: {
-    PRIVATE_KEY: process.env.INFURA_PRIVATE_KEY || '',
+    PRIVATE_KEY:
+      process.env.INFURA_PRIVATE_KEY ||
+      '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
     RPC_URL:
       process.env.INFURA_RPC_URL ||
-      'https://sepolia.infura.io/v3/384a472d6b5d4447b7a9f86afcc15635',
+      // 'https://sepolia.infura.io/v3/384a472d6b5d4447b7a9f86afcc15635',
+      'http://127.0.0.1:8545',
     FACTORY_ADDRESS: process.env.FACTORY_ADDRESS || '',
   },
   PINATA: {

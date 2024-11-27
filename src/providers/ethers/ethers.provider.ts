@@ -96,33 +96,60 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async deployCampaign(goalAmount: number, endDate: number): Promise<string> {
-    try {
-      const tx = await this.factoryContract.createCampaign(goalAmount, endDate);
+  async deployCampaign(
+    title: string,
+    description: string,
+    image: string,
+    goalAmount: number,
+    endDate: number,
+  ): Promise<string> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.factoryContract.on('CampaignCreated', (campaignAddress) => {
+          console.log(`Campaign created: ${campaignAddress}`);
+          resolve(campaignAddress);
+        });
 
-      const receipt = await tx.wait();
+        const tx = await this.factoryContract.createCampaign(
+          title,
+          description,
+          image,
+          goalAmount,
+          endDate,
+        );
 
-      const event = receipt.events?.find((e) => e.event === 'CampaignCreated');
+        await tx.wait();
 
-      if (!event) {
-        throw new Error('CampaignCreated event not found');
+        setTimeout(() => {
+          reject(new Error('CampaignCreated event not emitted'));
+        }, 60000);
+      } catch (error) {
+        console.error('Failed to deploy campaign:', error);
+
+        reject(error);
       }
-
-      const campaignAddress = event.args?.campaignAddress;
-
-      this.logger.log(`Campaign deployed at address: ${campaignAddress}`);
-
-      return campaignAddress;
-    } catch (error) {
-      this.logger.error('Failed to deploy campaign', error.stack);
-
-      throw new Error('Could not deploy campaign');
-    }
+    });
   }
 
-  async getCampaigns(startIndex: number, limit: number): Promise<string[]> {
+  async getCampaigns(
+    startIndex: number,
+    limit: number,
+  ): Promise<{ data: []; total: number }> {
     try {
-      return await this.factoryContract.getCampaigns(startIndex, limit);
+      const result = await this.factoryContract.getCampaigns(startIndex, limit);
+
+      const formattedResult = result.map((item) => ({
+        campaignAddress: item[0],
+        creatorAddress: item[1],
+        title: item[2],
+        description: item[3],
+        image: item[4],
+        goalAmount: Number(item[5].toString()),
+        totalContributed: Number(item[6].toString()),
+        endDate: Number(item[7].toString()),
+      }));
+
+      return { data: formattedResult, total: formattedResult.length };
     } catch (error) {
       this.logger.error('Failed to retrieve campaigns', error.stack);
 
@@ -268,6 +295,37 @@ export class EthersProvider implements OnModuleDestroy {
       );
 
       throw new Error('Could not retrieve campaign status');
+    }
+  }
+
+  async getCampaignDetails(campaignAddress: string): Promise<any> {
+    try {
+      const campaignContract = new ethers.Contract(
+        campaignAddress,
+        this.campaignABI,
+        this.provider,
+      );
+
+      const details = await campaignContract.getCampaignDetails();
+
+      const decodedDetails = {
+        creatorAddress: details[0],
+        title: details[1],
+        description: details[2],
+        image: details[3],
+        goalAmount: Number(details[4].toString()),
+        totalContributed: Number(details[5].toString()),
+        endDate: Number(details[6].toString()),
+      };
+
+      return decodedDetails;
+    } catch (error) {
+      this.logger.error(
+        `Failed to retrieve details for campaign ${campaignAddress}`,
+        error.stack,
+      );
+
+      throw new Error('Could not retrieve campaign details');
     }
   }
 

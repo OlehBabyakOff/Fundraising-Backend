@@ -11,6 +11,7 @@ import { WebSocketModule } from './providers/websocket/websocket.module';
 
 import { AuthModule } from './app/auth/auth.module';
 import { UserModule } from './app/user/user.module';
+import { CampaignModule } from './app/campaign/campaign.module';
 
 import { memoryStorage } from 'multer';
 
@@ -38,6 +39,7 @@ import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
     EthersModule,
     AuthModule,
     UserModule,
+    CampaignModule,
   ],
   controllers: [],
   providers: [],

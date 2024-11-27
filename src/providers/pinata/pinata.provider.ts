@@ -22,14 +22,12 @@ export class PinataProvider implements OnModuleDestroy {
 
   async uploadFile(file: Express.Multer.File): Promise<string> {
     try {
-      console.log(file);
-
       if (!file || !file.buffer) {
         throw new BadRequestException('File is required');
       }
 
       const pinataMetadata = {
-        name: file.originalname, // TODO update name with user wallet or Date.now()
+        name: file.originalname + Date.now(),
       };
 
       const result = await this.pinata.pinFileToIPFS(
