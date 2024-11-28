@@ -37,7 +37,7 @@ export class CampaignController {
   async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateCampaignDTO,
-  ): Promise<string> {
+  ) {
     const result = await this.campaignService.create(file, dto);
 
     return result;

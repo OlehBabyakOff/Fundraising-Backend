@@ -29,6 +29,7 @@ import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
     MongooseModule.forRootAsync({
       useFactory: async (configService: ConfigService) => ({
         uri: configService.get<string>('MONGO.URI'),
+        dbName: 'CryptoFunds',
       }),
       inject: [ConfigService],
     }),

@@ -6,10 +6,14 @@ import { PinataProvider } from 'src/providers/pinata/pinata.provider';
 import { EthersProvider } from 'src/providers/ethers/ethers.provider';
 import { DonateDTO } from './DTO/donate.dto';
 import { resolvePagination } from 'src/common/helpers/pagination.helper';
+import { InjectModel } from '@nestjs/mongoose';
+import { Campaign, CampaignModel } from './schemas/campaign.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class CampaignService {
   constructor(
+    @InjectModel(Campaign.name) private campaignModel: Model<CampaignModel>,
     private readonly redisProvider: RedisProvider,
     private readonly pinataProvider: PinataProvider,
     private readonly ethersProvider: EthersProvider,
@@ -18,7 +22,7 @@ export class CampaignService {
   async create(
     file: Express.Multer.File,
     createCampaignDTO: CreateCampaignDTO,
-  ): Promise<string> {
+  ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
@@ -27,7 +31,7 @@ export class CampaignService {
 
     const ipfsLink = await this.pinataProvider.uploadFile(file);
 
-    const campaignAddress = await this.ethersProvider.deployCampaign(
+    const result = await this.ethersProvider.deployCampaign(
       title,
       description,
       ipfsLink,
@@ -35,7 +39,17 @@ export class CampaignService {
       endDate,
     );
 
-    return campaignAddress;
+    const newCampaign = await new this.campaignModel({
+      title: createCampaignDTO.title,
+      description: createCampaignDTO.description,
+      goalAmount: createCampaignDTO.goalAmount,
+      endDate: new Date(createCampaignDTO.endDate).getTime(),
+      image: ipfsLink,
+      campaignAddress: result.campaignAddress,
+      creatorAddress: result.creatorAddress,
+    });
+
+    return newCampaign;
   }
 
   async getList(query) {

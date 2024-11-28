@@ -105,13 +105,26 @@ export class EthersProvider implements OnModuleDestroy {
     image: string,
     goalAmount: number,
     endDate: string,
-  ): Promise<string> {
+  ): Promise<{ campaignAddress: string; creatorAddress: string }> {
     return new Promise(async (resolve, reject) => {
       try {
-        this.factoryContract.on('CampaignCreated', (campaignAddress) => {
-          console.log(`Campaign created: ${campaignAddress}`);
-          resolve(campaignAddress);
-        });
+        const timeout = setTimeout(() => {
+          reject(
+            new Error('CampaignCreated event not emitted within the timeout'),
+          );
+        }, 60000);
+
+        this.factoryContract.once(
+          'CampaignCreated',
+          (campaignAddress, creatorAddress) => {
+            console.log(`Campaign created: ${campaignAddress}`);
+            console.log(`Creator address: ${creatorAddress}`);
+
+            resolve({ campaignAddress, creatorAddress });
+
+            clearTimeout(timeout);
+          },
+        );
 
         const endDateInMilliseconds = new Date(endDate).getTime();
 
@@ -124,10 +137,6 @@ export class EthersProvider implements OnModuleDestroy {
         );
 
         await tx.wait();
-
-        setTimeout(() => {
-          reject(new Error('CampaignCreated event not emitted'));
-        }, 60000);
       } catch (error) {
         console.error('Failed to deploy campaign:', error);
 
