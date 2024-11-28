@@ -126,7 +126,26 @@ export class CampaignService {
   }
 
   async getDetails(address: string) {
-    const result = await this.ethersProvider.getCampaignDetails(address);
+    if (!address) {
+      throw new BadRequestException("Адреса збору є обов'язковою!");
+    }
+
+    const [result] = await this.campaignModel.aggregate([
+      { $match: { campaignAddress: address } },
+      {
+        $lookup: {
+          from: 'transactions',
+          localField: 'campaignAddress',
+          foreignField: 'campaignAddress',
+          pipeline: [{ $sort: { createdAt: -1 } }],
+          as: 'transactions',
+        },
+      },
+    ]);
+
+    if (!result) {
+      throw new BadRequestException('Збір не знайдено!');
+    }
 
     return result;
   }

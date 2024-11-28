@@ -23,8 +23,6 @@ import {
   createCampaignSchema,
 } from './DTO/create-campaign.dto';
 
-import { GetDetailsDTO, getDetailsSchema } from './DTO/get-details.dto';
-
 import { DonateDTO, donateSchema } from './DTO/donate.dto';
 
 @Controller('campaign')
@@ -52,9 +50,8 @@ export class CampaignController {
   }
 
   @Get('details/:address')
-  @UsePipes(new JoiValidationPipe(getDetailsSchema))
-  async getDetails(@Param() dto: GetDetailsDTO) {
-    const result = await this.campaignService.getDetails(dto.address);
+  async getDetails(@Param() params: { address: string }) {
+    const result = await this.campaignService.getDetails(params.address);
 
     return result;
   }
