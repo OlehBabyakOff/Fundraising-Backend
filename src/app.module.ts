@@ -16,6 +16,8 @@ import { CampaignModule } from './app/campaign/campaign.module';
 import { memoryStorage } from 'multer';
 
 import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
+import { CampaignSchema } from './app/campaign/schemas/campaign.schema';
+import { TransactionSchema } from './app/campaign/schemas/transactions.schema';
 
 @Module({
   imports: [
@@ -33,6 +35,10 @@ import { APIConfig, CacheConfig, DatabaseConfig, EthersConfig } from './config';
       }),
       inject: [ConfigService],
     }),
+    MongooseModule.forFeature([{ name: 'Campaign', schema: CampaignSchema }]),
+    MongooseModule.forFeature([
+      { name: 'Transaction', schema: TransactionSchema },
+    ]),
     RedisModule,
     WebSocketModule,
     CronjobModule,

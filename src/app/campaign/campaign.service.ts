@@ -5,15 +5,15 @@ import { CreateCampaignDTO } from './DTO/create-campaign.dto';
 import { PinataProvider } from 'src/providers/pinata/pinata.provider';
 import { EthersProvider } from 'src/providers/ethers/ethers.provider';
 import { DonateDTO } from './DTO/donate.dto';
-import { resolvePagination } from 'src/common/helpers/pagination.helper';
-import { InjectModel } from '@nestjs/mongoose';
-import { Campaign, CampaignModel } from './schemas/campaign.schema';
+import { pagination } from 'src/common/helpers/pagination.helper';
+import { ICampaign } from './schemas/campaign.schema';
 import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class CampaignService {
   constructor(
-    @InjectModel(Campaign.name) private campaignModel: Model<CampaignModel>,
+    @InjectModel('Campaign') private campaignModel: Model<ICampaign>,
     private readonly redisProvider: RedisProvider,
     private readonly pinataProvider: PinataProvider,
     private readonly ethersProvider: EthersProvider,
@@ -49,98 +49,80 @@ export class CampaignService {
       creatorAddress: result.creatorAddress,
     });
 
-    return newCampaign;
+    return newCampaign.save();
   }
 
   async getList(query) {
-    const { startIndex, endIndex } = resolvePagination(query);
+    const { count, skip } = pagination(query);
 
-    const campaigns = await this.ethersProvider.getCampaigns(
-      startIndex,
-      endIndex,
-    );
+    const match = { isCampaignEnded: false };
 
-    const filteredCampaigns = campaigns.data.filter(
-      (campaign: { isCampaignEnded: boolean; totalContributed: string }) =>
-        !campaign.isCampaignEnded,
-    );
+    const sort = {
+      popular: { differenceToGoal: 1 },
+      ending: { timeDifference: 1 },
+      new: { createdAt: -1 },
+    }[query.filter] || { totalContributed: -1 };
 
-    const sortedCampaigns =
-      {
-        popular: filteredCampaigns.sort(
-          (
-            a: { totalContributed: string },
-            b: { totalContributed: string },
-          ) => {
-            return (
-              Number.parseFloat(b.totalContributed) -
-              Number.parseFloat(a.totalContributed)
-            );
+    const [data, total] = await Promise.all([
+      this.campaignModel.aggregate([
+        { $match: match },
+        {
+          $addFields: {
+            timeDifference: {
+              $abs: {
+                $subtract: ['$endDate', new Date().getTime()],
+              },
+            },
+            differenceToGoal: {
+              $subtract: ['$goalAmount', '$totalContributed'],
+            },
           },
-        ),
-        ending: filteredCampaigns.sort(
-          (a: { endDate: string }, b: { endDate: string }) => {
-            const now = new Date().getTime();
-            const endA = new Date(a.endDate).getTime();
-            const endB = new Date(b.endDate).getTime();
-
-            return Math.abs(endA - now) - Math.abs(endB - now);
-          },
-        ),
-        new: filteredCampaigns.sort(
-          (
-            a: { totalContributed: string },
-            b: { totalContributed: string },
-          ) => {
-            return (
-              Number.parseFloat(a.totalContributed) -
-              Number.parseFloat(b.totalContributed)
-            );
-          },
-        ),
-      }[query.filter] ||
-      filteredCampaigns.sort(
-        (a: { totalContributed: string }, b: { totalContributed: string }) => {
-          return (
-            Number.parseFloat(b.totalContributed) -
-            Number.parseFloat(a.totalContributed)
-          );
         },
-      );
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: count },
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            image: 1,
+            endDate: 1,
+            goalAmount: 1,
+            totalContributed: { $round: ['$totalContributed', 2] },
+            campaignAddress: 1,
+          },
+        },
+      ]),
+      this.campaignModel.countDocuments(match),
+    ]);
 
-    return { data: sortedCampaigns, total: filteredCampaigns.length };
+    return {
+      data: data || [],
+      total: total || 0,
+    };
   }
 
   async getSlider() {
-    const totalCampaigns = await this.ethersProvider.getTotalCampaigns();
+    const match = { isCampaignEnded: false, totalContributed: { $gt: 0 } };
 
-    const { data } = await this.ethersProvider.getCampaigns(0, totalCampaigns);
+    const data = await this.campaignModel.aggregate([
+      { $match: match },
+      { $sort: { totalContributed: -1 } },
+      { $skip: 0 },
+      { $limit: 5 },
+      {
+        $project: {
+          title: 1,
+          description: 1,
+          image: 1,
+          endDate: 1,
+          goalAmount: 1,
+          totalContributed: { $round: ['$totalContributed', 2] },
+        },
+      },
+    ]);
 
-    const filteredCampaigns = data.length
-      ? data
-          .filter(
-            (campaign: {
-              isCampaignEnded: boolean;
-              totalContributed: string;
-            }) =>
-              !campaign.isCampaignEnded &&
-              Number.parseFloat(campaign.totalContributed) > 0,
-          )
-          .sort(
-            (
-              a: { totalContributed: string },
-              b: { totalContributed: string },
-            ) => {
-              return (
-                Number.parseFloat(b.totalContributed) -
-                Number.parseFloat(a.totalContributed)
-              );
-            },
-          )
-          .slice(0, 5)
-      : [];
-
-    return filteredCampaigns;
+    return data || [];
   }
 
   async getDetails(address: string) {
@@ -157,6 +139,13 @@ export class CampaignService {
         address,
         amount,
       );
+
+      if (result) {
+        await this.campaignModel.findOneAndUpdate(
+          { campaignAddress: address },
+          { $inc: { totalContributed: amount } },
+        );
+      }
 
       return result;
     } catch (error) {

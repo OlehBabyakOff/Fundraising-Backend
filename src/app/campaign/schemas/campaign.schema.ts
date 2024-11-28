@@ -1,27 +1,54 @@
-import * as mongoose from 'mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-export const CampaignSchema = new mongoose.Schema(
-  {
-    campaignAddress: { type: String, required: true },
-    creatorAddress: { type: String, required: true },
+@Schema({ timestamps: true })
+export class Campaign extends Document {
+  @Prop({ required: true })
+  campaignAddress: string;
 
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    image: { type: String, required: true },
-    goalAmount: { type: Number, required: true },
-    totalContributed: { type: Number, default: 0 },
-    endDate: { type: Number, required: true },
-    isGoalMet: { type: Boolean, default: false },
-    isCampaignEnded: { type: Boolean, default: false },
-    isReleased: { type: Boolean, default: false },
-    isRefunded: { type: Boolean, default: false },
-  },
-  { timestamps: true },
-);
+  @Prop({ required: true })
+  creatorAddress: string;
 
-export const Campaign = mongoose.model('Campaign', CampaignSchema);
+  @Prop({ required: true })
+  title: string;
 
-export interface CampaignModel {
+  @Prop({ required: true })
+  description: string;
+
+  @Prop({ required: true })
+  image: string;
+
+  @Prop({ required: true })
+  goalAmount: number;
+
+  @Prop({ default: 0 })
+  totalContributed: number;
+
+  @Prop({ required: true })
+  endDate: number;
+
+  @Prop({ default: false })
+  isGoalMet: boolean;
+
+  @Prop({ default: false })
+  isCampaignEnded: boolean;
+
+  @Prop({ default: false })
+  isReleased: boolean;
+
+  @Prop({ default: false })
+  isRefunded: boolean;
+
+  @Prop({ default: () => new Date() })
+  createdAt?: Date;
+
+  @Prop({ default: () => new Date() })
+  updatedAt?: Date;
+}
+
+export const CampaignSchema = SchemaFactory.createForClass(Campaign);
+
+export interface ICampaign {
   campaignAddress: string;
   creatorAddress: string;
   title: string;

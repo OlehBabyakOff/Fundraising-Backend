@@ -9,11 +9,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
 import { WebSocketGatewayProvider } from '../websocket/websocket.gateway.provider';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { ITransaction } from 'src/app/campaign/schemas/transactions.schema';
 
 @Injectable()
 export class EthersProvider implements OnModuleDestroy {
   private readonly logger = new Logger(EthersProvider.name);
   private readonly wsProvider: WebSocketGatewayProvider;
+
+  @InjectModel('Transaction') private transactionModel: Model<ITransaction>;
 
   private provider: ethers.JsonRpcProvider;
   private signer: ethers.Wallet;
@@ -202,8 +207,17 @@ export class EthersProvider implements OnModuleDestroy {
 
       const receipt = await tx.wait();
 
+      const newTransaction = await new this.transactionModel({
+        campaignAddress: campaignAddress,
+        creatorAddress: this.signer.address,
+        amount,
+        type: 'donation',
+        hash: receipt.hash,
+      });
+
       this.listenForDonationEvent(campaignContract);
-      return receipt;
+
+      return newTransaction.save();
     } catch (error) {
       this.logger.error(
         `Failed to donate to campaign ${campaignAddress}`,
@@ -222,21 +236,13 @@ export class EthersProvider implements OnModuleDestroy {
         this.signer,
       );
 
-      const details = await this.getCampaignDetails(campaignAddress);
+      const tx = await campaignContract.refund();
 
-      if (
-        !details.isRefunded &&
-        details.isCampaignEnded &&
-        !details.isGoalMet
-      ) {
-        const tx = await campaignContract.refund();
+      const receipt = await tx.wait();
 
-        const receipt = await tx.wait();
+      this.listenForRefundEvent(campaignContract);
 
-        this.listenForRefundEvent(campaignContract);
-
-        return receipt;
-      }
+      return receipt;
     } catch (error) {
       this.logger.error(
         `Failed to get refund from campaign ${campaignAddress}`,
@@ -255,17 +261,13 @@ export class EthersProvider implements OnModuleDestroy {
         this.signer,
       );
 
-      const details = await this.getCampaignDetails(campaignAddress);
+      const tx = await campaignContract.releaseFunds();
 
-      if (!details.isReleased && details.isGoalMet && details.isCampaignEnded) {
-        const tx = await campaignContract.releaseFunds();
+      const receipt = await tx.wait();
 
-        const receipt = await tx.wait();
+      this.listenForFundsReleasedEvent(campaignContract);
 
-        this.listenForFundsReleasedEvent(campaignContract);
-
-        return receipt;
-      }
+      return receipt;
     } catch (error) {
       this.logger.error(
         `Failed to release funds from campaign ${campaignAddress}`,
@@ -284,20 +286,14 @@ export class EthersProvider implements OnModuleDestroy {
         this.signer,
       );
 
-      const details = await this.getCampaignDetails(campaignAddress);
+      const { isCampaignEnded } = await this.getCampaignStatus(campaignAddress);
 
-      if (
-        !details.isCampaignEnded &&
-        !details.isGoalMet &&
-        details.endDate < Date.now() &&
-        !details.isRefunded &&
-        !details.isReleased
-      ) {
+      if (!isCampaignEnded) {
         const tx = await campaignContract.endCampaign();
 
-        const receipt = await tx.wait();
+        await tx.wait();
 
-        return receipt;
+        return { message: `Campaign ${campaignAddress} ended!` };
       }
     } catch (error) {
       this.logger.error(
@@ -317,14 +313,10 @@ export class EthersProvider implements OnModuleDestroy {
         this.provider,
       );
 
-      const [goalAmount, totalContributionsAmount, isGoalMet] =
-        await Promise.all([
-          campaignContract.goalAmount(),
-          campaignContract.totalContributionsAmount(),
-          campaignContract.isGoalMet(),
-        ]);
+      const [isCampaignEnded, isGoalMet, totalContributionsAmount] =
+        await campaignContract.getCampaignStatus();
 
-      return { goalAmount, totalContributionsAmount, isGoalMet };
+      return { isCampaignEnded, totalContributionsAmount, isGoalMet };
     } catch (error) {
       this.logger.error(
         `Failed to retrieve status for campaign ${campaignAddress}`,
