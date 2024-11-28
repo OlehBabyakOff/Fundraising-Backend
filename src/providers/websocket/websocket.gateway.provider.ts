@@ -1,7 +1,6 @@
 import {
   WebSocketGateway,
   WebSocketServer,
-  SubscribeMessage,
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
@@ -10,13 +9,11 @@ import { Injectable, Logger } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { ethers } from 'ethers';
 
 @Injectable()
 @WebSocketGateway({
   cors: {
     origin: '*',
-    // origin: 'https://your-frontend-url.com',
     methods: ['GET', 'POST'],
   },
 })
@@ -39,6 +36,12 @@ export class WebSocketGatewayProvider
 
   async handleConnection(client: Socket) {
     try {
+      if (!this.server) {
+        this.logger.error('WebSocket server is not initialized');
+
+        return;
+      }
+
       const token = client.handshake.auth?.token;
 
       if (!token) {
@@ -50,7 +53,7 @@ export class WebSocketGatewayProvider
       }
 
       const decoded = this.jwtService.verify(token, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
       });
 
       if (!decoded) {

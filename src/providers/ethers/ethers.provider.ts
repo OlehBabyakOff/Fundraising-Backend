@@ -388,8 +388,11 @@ export class EthersProvider implements OnModuleDestroy {
   }
 
   private listenForDonationEvent(campaignContract: ethers.Contract) {
-    campaignContract.on('DonationReceived', (donor, amount) => {
-      this.wsProvider.notifyDonationEvent(donor, ethers.formatEther(amount));
+    campaignContract.on('DonationReceived', async (donor, amount) => {
+      await this.wsProvider.notifyDonationEvent(
+        donor,
+        ethers.formatEther(amount),
+      );
 
       this.logger.log(
         `Donation received from ${donor} of ${ethers.formatEther(amount)} ETH`,
@@ -398,8 +401,11 @@ export class EthersProvider implements OnModuleDestroy {
   }
 
   private listenForRefundEvent(campaignContract: ethers.Contract) {
-    campaignContract.on('RefundIssued', (donor, amount) => {
-      this.wsProvider.notifyRefundEvent(donor, ethers.formatEther(amount));
+    campaignContract.on('RefundIssued', async (donor, amount) => {
+      await this.wsProvider.notifyRefundEvent(
+        donor,
+        ethers.formatEther(amount),
+      );
 
       this.logger.log(
         `Refund issued to ${donor} of ${ethers.formatEther(amount)} ETH`,
@@ -408,8 +414,11 @@ export class EthersProvider implements OnModuleDestroy {
   }
 
   private listenForFundsReleasedEvent(campaignContract: ethers.Contract) {
-    campaignContract.on('FundsReleased', (creator, amount) => {
-      this.wsProvider.notifyReleaseEvent(creator, ethers.formatEther(amount));
+    campaignContract.on('FundsReleased', async (creator, amount) => {
+      await this.wsProvider.notifyReleaseEvent(
+        creator,
+        ethers.formatEther(amount),
+      );
 
       this.logger.log(`Funds released: ${ethers.formatEther(amount)} ETH`);
     });
