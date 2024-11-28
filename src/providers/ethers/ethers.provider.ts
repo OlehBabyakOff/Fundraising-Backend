@@ -192,7 +192,7 @@ export class EthersProvider implements OnModuleDestroy {
 
   async donateToCampaign(
     campaignAddress: string,
-    amount: string,
+    amount: number,
   ): Promise<any> {
     try {
       const campaignContract = new ethers.Contract(
@@ -202,7 +202,7 @@ export class EthersProvider implements OnModuleDestroy {
       );
 
       const tx = await campaignContract.donate({
-        value: ethers.parseEther(amount),
+        value: ethers.parseEther(amount.toString()),
       });
 
       const receipt = await tx.wait();

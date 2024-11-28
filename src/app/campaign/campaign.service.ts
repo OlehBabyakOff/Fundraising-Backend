@@ -118,6 +118,7 @@ export class CampaignService {
           endDate: 1,
           goalAmount: 1,
           totalContributed: { $round: ['$totalContributed', 2] },
+          campaignAddress: 1,
         },
       },
     ]);
