@@ -14,11 +14,13 @@ import { pagination } from 'src/common/helpers/pagination.helper';
 import { ICampaign } from './schemas/campaign.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { ITransaction } from './schemas/transactions.schema';
 
 @Injectable()
 export class CampaignService {
   constructor(
     @InjectModel('Campaign') private campaignModel: Model<ICampaign>,
+    @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
     private readonly redisProvider: RedisProvider,
     private readonly pinataProvider: PinataProvider,
     private readonly ethersProvider: EthersProvider,
@@ -35,8 +37,6 @@ export class CampaignService {
   }
 
   async create(createCampaignDTO: CreateCampaignDTO) {
-    // const { title, description, goalAmount, endDate } = createCampaignDTO;
-
     await this.ethersProvider.validateTransactionReceipt(
       createCampaignDTO.transactionHash,
     );
@@ -47,18 +47,6 @@ export class CampaignService {
     });
 
     return newCampaign.save();
-
-    // const newCampaign = await new this.campaignModel({
-    //   title: createCampaignDTO.title,
-    //   description: createCampaignDTO.description,
-    //   goalAmount: createCampaignDTO.goalAmount,
-    //   endDate: new Date(createCampaignDTO.endDate).getTime(),
-    //   image: ipfsLink,
-    //   campaignAddress: result.campaignAddress,
-    //   creatorAddress: result.creatorAddress,
-    // });
-
-    // return newCampaign.save();
   }
 
   async getList(query) {
@@ -162,21 +150,22 @@ export class CampaignService {
 
   async donate(address: string, dto: DonateDTO) {
     try {
-      const { amount } = dto;
+      const { amount, campaignAddress, transactionHash } = dto;
 
-      const result = await this.ethersProvider.donateToCampaign(
-        address,
-        amount,
+      await this.campaignModel.findOneAndUpdate(
+        { campaignAddress: address },
+        { $inc: { totalContributed: amount } },
       );
 
-      if (result) {
-        await this.campaignModel.findOneAndUpdate(
-          { campaignAddress: address },
-          { $inc: { totalContributed: amount } },
-        );
-      }
+      const newTransaction = await new this.transactionModel({
+        campaignAddress: campaignAddress,
+        creatorAddress: address,
+        amount,
+        type: 'donation',
+        hash: transactionHash,
+      });
 
-      return result;
+      return newTransaction.save();
     } catch (error) {
       console.error('Error while donating:', error.message);
 

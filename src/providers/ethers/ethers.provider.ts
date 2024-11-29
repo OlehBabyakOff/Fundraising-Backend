@@ -11,16 +11,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
 import { WebSocketGatewayProvider } from '../websocket/websocket.gateway.provider';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { ITransaction } from 'src/app/campaign/schemas/transactions.schema';
 
 @Injectable()
 export class EthersProvider implements OnModuleDestroy {
   private readonly logger = new Logger(EthersProvider.name);
   private readonly wsProvider: WebSocketGatewayProvider;
-
-  @InjectModel('Transaction') private transactionModel: Model<ITransaction>;
 
   private provider: ethers.JsonRpcProvider;
   private signer: ethers.Wallet;
@@ -134,51 +129,51 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async deployCampaign(
-    title: string,
-    description: string,
-    image: string,
-    goalAmount: number,
-    endDate: string,
-  ): Promise<{ campaignAddress: string; creatorAddress: string }> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const timeout = setTimeout(() => {
-          reject(
-            new HttpException(
-              `CampaignCreated event not emitted within the timeout`,
-              HttpStatus.BAD_REQUEST,
-            ),
-          );
-        }, 60000);
+  // async deployCampaign(
+  //   title: string,
+  //   description: string,
+  //   image: string,
+  //   goalAmount: number,
+  //   endDate: string,
+  // ): Promise<{ campaignAddress: string; creatorAddress: string }> {
+  //   return new Promise(async (resolve, reject) => {
+  //     try {
+  //       const timeout = setTimeout(() => {
+  //         reject(
+  //           new HttpException(
+  //             `CampaignCreated event not emitted within the timeout`,
+  //             HttpStatus.BAD_REQUEST,
+  //           ),
+  //         );
+  //       }, 60000);
 
-        this.factoryContract.once(
-          'CampaignCreated',
-          (campaignAddress, creatorAddress) => {
-            resolve({ campaignAddress, creatorAddress });
+  //       this.factoryContract.once(
+  //         'CampaignCreated',
+  //         (campaignAddress, creatorAddress) => {
+  //           resolve({ campaignAddress, creatorAddress });
 
-            clearTimeout(timeout);
-          },
-        );
+  //           clearTimeout(timeout);
+  //         },
+  //       );
 
-        const endDateInMilliseconds = new Date(endDate).getTime();
+  //       const endDateInMilliseconds = new Date(endDate).getTime();
 
-        const tx = await this.factoryContract.createCampaign(
-          title,
-          description,
-          image,
-          ethers.parseEther(goalAmount.toString()),
-          endDateInMilliseconds,
-        );
+  //       const tx = await this.factoryContract.createCampaign(
+  //         title,
+  //         description,
+  //         image,
+  //         ethers.parseEther(goalAmount.toString()),
+  //         endDateInMilliseconds,
+  //       );
 
-        await tx.wait();
-      } catch (error) {
-        console.error('Failed to deploy campaign:', error);
+  //       await tx.wait();
+  //     } catch (error) {
+  //       console.error('Failed to deploy campaign:', error);
 
-        reject(error);
-      }
-    });
-  }
+  //       reject(error);
+  //     }
+  //   });
+  // }
 
   async resetActiveCampaignStatus(creatorAddress: string): Promise<any> {
     try {
@@ -232,54 +227,54 @@ export class EthersProvider implements OnModuleDestroy {
     }
   }
 
-  async donateToCampaign(
-    campaignAddress: string,
-    amount: number,
-  ): Promise<any> {
-    try {
-      const campaignContract = new ethers.Contract(
-        campaignAddress,
-        this.campaignABI,
-        this.signer,
-      );
+  // async donateToCampaign(
+  //   campaignAddress: string,
+  //   amount: number,
+  // ): Promise<any> {
+  //   try {
+  //     const campaignContract = new ethers.Contract(
+  //       campaignAddress,
+  //       this.campaignABI,
+  //       this.signer,
+  //     );
 
-      const tx = await campaignContract.donate({
-        value: ethers.parseEther(amount.toString()),
-      });
+  //     const tx = await campaignContract.donate({
+  //       value: ethers.parseEther(amount.toString()),
+  //     });
 
-      const receipt = await tx.wait();
+  //     const receipt = await tx.wait();
 
-      const newTransaction = await new this.transactionModel({
-        campaignAddress: campaignAddress,
-        creatorAddress: this.signer.address,
-        amount,
-        type: 'donation',
-        hash: receipt.hash,
-      });
+  //     const newTransaction = await new this.transactionModel({
+  //       campaignAddress: campaignAddress,
+  //       creatorAddress: this.signer.address,
+  //       amount,
+  //       type: 'donation',
+  //       hash: receipt.hash,
+  //     });
 
-      this.listenForDonationEvent(campaignContract);
+  //     this.listenForDonationEvent(campaignContract);
 
-      return newTransaction.save();
-    } catch (error) {
-      if (error.code === 'CALL_EXCEPTION') {
-        const errorMessage = error.reason;
+  //     return newTransaction.save();
+  //   } catch (error) {
+  //     if (error.code === 'CALL_EXCEPTION') {
+  //       const errorMessage = error.reason;
 
-        this.logger.error(
-          `Failed to donate to campaign ${campaignAddress}: ${errorMessage}`,
-          error.stack,
-        );
+  //       this.logger.error(
+  //         `Failed to donate to campaign ${campaignAddress}: ${errorMessage}`,
+  //         error.stack,
+  //       );
 
-        throw new HttpException(` ${errorMessage}`, HttpStatus.BAD_REQUEST);
-      }
+  //       throw new HttpException(` ${errorMessage}`, HttpStatus.BAD_REQUEST);
+  //     }
 
-      this.logger.error(
-        `Failed to donate to campaign ${campaignAddress}`,
-        error.stack,
-      );
+  //     this.logger.error(
+  //       `Failed to donate to campaign ${campaignAddress}`,
+  //       error.stack,
+  //     );
 
-      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
-    }
-  }
+  //     throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
+  //   }
+  // }
 
   async refundFromCampaign(campaignAddress: string): Promise<any> {
     try {
@@ -438,19 +433,6 @@ export class EthersProvider implements OnModuleDestroy {
     const signature = await this.signer.signMessage(message);
 
     return { account: this.signer.address, signature };
-  }
-
-  private listenForDonationEvent(campaignContract: ethers.Contract) {
-    campaignContract.on('DonationReceived', async (donor, amount) => {
-      // await this.wsProvider.notifyDonationEvent(
-      //   donor,
-      //   ethers.formatEther(amount),
-      // );
-
-      this.logger.log(
-        `Donation received from ${donor} of ${ethers.formatEther(amount)} ETH`,
-      );
-    });
   }
 
   private listenForRefundEvent(campaignContract: ethers.Contract) {

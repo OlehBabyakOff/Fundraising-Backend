@@ -74,12 +74,6 @@ export class CampaignController {
   async donate(@Body() dto: DonateDTO, @Param() param) {
     const result = await this.campaignService.donate(param.address, dto);
 
-    if (!result) {
-      throw new BadRequestException('Помилка під час донату');
-    }
-
-    return {
-      message: `Ви успішно задонатили ${dto.amount} ETH на збір ${param.address}`,
-    };
+    return result;
   }
 }
