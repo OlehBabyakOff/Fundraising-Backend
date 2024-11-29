@@ -97,7 +97,7 @@ export class EthersProvider implements OnModuleDestroy {
             .get<string>('ETHEREUM.FACTORY_ADDRESS')
             .toLowerCase()
       ) {
-        throw new BadRequestException('Не правильна транзакція.');
+        throw new BadRequestException('Неправильна транзакція.');
       }
 
       return txReceipt;
@@ -177,7 +177,14 @@ export class EthersProvider implements OnModuleDestroy {
 
   async resetActiveCampaignStatus(creatorAddress: string): Promise<any> {
     try {
-      await this.factoryContract.resetActiveCampaignStatus(creatorAddress);
+      if (!creatorAddress || !ethers.isAddress(creatorAddress)) {
+        throw new Error('Неправильна Ethereum адреса');
+      }
+
+      const tx =
+        await this.factoryContract.resetActiveCampaignStatus(creatorAddress);
+
+      await tx.wait();
     } catch (error) {
       this.logger.error(
         `Failed to reset active status for creator ${creatorAddress}`,

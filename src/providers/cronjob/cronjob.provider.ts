@@ -22,78 +22,78 @@ export class CronjobProvider {
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
   ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
-  async handleCampaignRefundCron() {
-    this.logger.log('Starting refund processing for all campaigns');
+  // @Cron(CronExpression.EVERY_MINUTE)
+  // async handleCampaignRefundCron() {
+  //   this.logger.log('Starting refund processing for all campaigns');
 
-    try {
-      const campaigns = await this.campaignModel.aggregate([
-        {
-          $addFields: {
-            goalNotMet: { $ne: ['$totalContributed', '$goalAmount'] },
-          },
-        },
-        {
-          $match: {
-            goalNotMet: true,
-            isCampaignEnded: true,
-            isRefunded: false,
-          },
-        },
-        {
-          $project: {
-            goalAmount: 1,
-            totalContributed: 1,
-            isCampaignEnded: 1,
-            campaignAddress: 1,
-            creatorAddress: 1,
-          },
-        },
-      ]);
+  //   try {
+  //     const campaigns = await this.campaignModel.aggregate([
+  //       {
+  //         $addFields: {
+  //           goalNotMet: { $ne: ['$totalContributed', '$goalAmount'] },
+  //         },
+  //       },
+  //       {
+  //         $match: {
+  //           goalNotMet: true,
+  //           isCampaignEnded: true,
+  //           isRefunded: false,
+  //         },
+  //       },
+  //       {
+  //         $project: {
+  //           goalAmount: 1,
+  //           totalContributed: 1,
+  //           isCampaignEnded: 1,
+  //           campaignAddress: 1,
+  //           creatorAddress: 1,
+  //         },
+  //       },
+  //     ]);
 
-      for (const campaign of campaigns) {
-        try {
-          const result = await this.ethersProvider.refundFromCampaign(
-            campaign.campaignAddress,
-          );
+  //     for (const campaign of campaigns) {
+  //       try {
+  //         const result = await this.ethersProvider.refundFromCampaign(
+  //           campaign.campaignAddress,
+  //         );
 
-          if (result) {
-            await Promise.all([
-              this.campaignModel.updateOne(
-                { _id: campaign._id },
-                { $set: { isRefunded: true } },
-              ),
+  //         if (result) {
+  //           await Promise.all([
+  //             this.campaignModel.updateOne(
+  //               { _id: campaign._id },
+  //               { $set: { isRefunded: true } },
+  //             ),
 
-              new this.transactionModel({
-                campaignAddress: campaign.campaignAddress,
-                creatorAddress: campaign.creatorAddress,
-                amount: campaign.totalContributed,
-                type: 'refund',
-                hash: result.hash,
-              }).save(),
-            ]);
+  //             new this.transactionModel({
+  //               campaignAddress: campaign.campaignAddress,
+  //               creatorAddress: campaign.creatorAddress,
+  //               amount: campaign.totalContributed,
+  //               type: 'refund',
+  //               hash: result.hash,
+  //             }).save(),
+  //           ]);
 
-            this.logger.log(
-              `Successfully processed refund for campaign: ${campaign.campaignAddress}`,
-            );
-          }
-        } catch (error) {
-          if (error instanceof BadRequestException) {
-            continue;
-          }
+  //           this.logger.log(
+  //             `Successfully processed refund for campaign: ${campaign.campaignAddress}`,
+  //           );
+  //         }
+  //       } catch (error) {
+  //         if (error instanceof BadRequestException) {
+  //           continue;
+  //         }
 
-          this.logger.error(
-            `Failed to process refund for campaign ${campaign.campaignAddress}`,
-            error.stack,
-          );
-        }
-      }
-    } catch (error) {
-      this.logger.error('Error fetching campaigns', error.stack);
+  //         this.logger.error(
+  //           `Failed to process refund for campaign ${campaign.campaignAddress}`,
+  //           error.stack,
+  //         );
+  //       }
+  //     }
+  //   } catch (error) {
+  //     this.logger.error('Error fetching campaigns', error.stack);
 
-      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
-    }
-  }
+  //     throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
+  //   }
+  // }
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleCampaignReleaseCron() {
@@ -195,6 +195,7 @@ export class CronjobProvider {
             totalContributed: 1,
             isCampaignEnded: 1,
             campaignAddress: 1,
+            creatorAddress: 1,
           },
         },
       ]);
