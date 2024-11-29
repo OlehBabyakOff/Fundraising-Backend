@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   OnModuleDestroy,
@@ -115,16 +117,16 @@ export class EthersProvider implements OnModuleDestroy {
       try {
         const timeout = setTimeout(() => {
           reject(
-            new Error('CampaignCreated event not emitted within the timeout'),
+            new HttpException(
+              `CampaignCreated event not emitted within the timeout`,
+              HttpStatus.BAD_REQUEST,
+            ),
           );
         }, 60000);
 
         this.factoryContract.once(
           'CampaignCreated',
           (campaignAddress, creatorAddress) => {
-            console.log(`Campaign created: ${campaignAddress}`);
-            console.log(`Creator address: ${creatorAddress}`);
-
             resolve({ campaignAddress, creatorAddress });
 
             clearTimeout(timeout);
@@ -176,7 +178,7 @@ export class EthersProvider implements OnModuleDestroy {
     } catch (error) {
       this.logger.error('Failed to retrieve campaigns', error.stack);
 
-      throw new Error('Could not retrieve campaigns');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -186,7 +188,7 @@ export class EthersProvider implements OnModuleDestroy {
     } catch (error) {
       this.logger.error('Failed to retrieve total campaigns', error.stack);
 
-      throw new Error('Could not retrieve total campaigns');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -219,12 +221,23 @@ export class EthersProvider implements OnModuleDestroy {
 
       return newTransaction.save();
     } catch (error) {
+      if (error.code === 'CALL_EXCEPTION') {
+        const errorMessage = error.reason;
+
+        this.logger.error(
+          `Failed to donate to campaign ${campaignAddress}: ${errorMessage}`,
+          error.stack,
+        );
+
+        throw new HttpException(` ${errorMessage}`, HttpStatus.BAD_REQUEST);
+      }
+
       this.logger.error(
         `Failed to donate to campaign ${campaignAddress}`,
         error.stack,
       );
 
-      throw new Error('Could not donate to campaign');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -249,7 +262,7 @@ export class EthersProvider implements OnModuleDestroy {
         error.stack,
       );
 
-      throw new Error('Could not get refund');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -274,7 +287,7 @@ export class EthersProvider implements OnModuleDestroy {
         error.stack,
       );
 
-      throw new Error('Could not release funds');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -301,7 +314,7 @@ export class EthersProvider implements OnModuleDestroy {
         error.stack,
       );
 
-      throw new Error('Could not end campaign');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -323,7 +336,7 @@ export class EthersProvider implements OnModuleDestroy {
         error.stack,
       );
 
-      throw new Error('Could not retrieve campaign status');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -358,7 +371,7 @@ export class EthersProvider implements OnModuleDestroy {
         error.stack,
       );
 
-      throw new Error('Could not retrieve campaign details');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -374,7 +387,7 @@ export class EthersProvider implements OnModuleDestroy {
     } catch (error) {
       this.logger.error('Failed to verify message', error.stack);
 
-      throw new Error('Could not verify message');
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -389,10 +402,10 @@ export class EthersProvider implements OnModuleDestroy {
 
   private listenForDonationEvent(campaignContract: ethers.Contract) {
     campaignContract.on('DonationReceived', async (donor, amount) => {
-      await this.wsProvider.notifyDonationEvent(
-        donor,
-        ethers.formatEther(amount),
-      );
+      // await this.wsProvider.notifyDonationEvent(
+      //   donor,
+      //   ethers.formatEther(amount),
+      // );
 
       this.logger.log(
         `Donation received from ${donor} of ${ethers.formatEther(amount)} ETH`,
@@ -402,10 +415,10 @@ export class EthersProvider implements OnModuleDestroy {
 
   private listenForRefundEvent(campaignContract: ethers.Contract) {
     campaignContract.on('RefundIssued', async (donor, amount) => {
-      await this.wsProvider.notifyRefundEvent(
-        donor,
-        ethers.formatEther(amount),
-      );
+      // await this.wsProvider.notifyRefundEvent(
+      //   donor,
+      //   ethers.formatEther(amount),
+      // );
 
       this.logger.log(
         `Refund issued to ${donor} of ${ethers.formatEther(amount)} ETH`,
@@ -415,10 +428,10 @@ export class EthersProvider implements OnModuleDestroy {
 
   private listenForFundsReleasedEvent(campaignContract: ethers.Contract) {
     campaignContract.on('FundsReleased', async (creator, amount) => {
-      await this.wsProvider.notifyReleaseEvent(
-        creator,
-        ethers.formatEther(amount),
-      );
+      // await this.wsProvider.notifyReleaseEvent(
+      //   creator,
+      //   ethers.formatEther(amount),
+      // );
 
       this.logger.log(`Funds released: ${ethers.formatEther(amount)} ETH`);
     });

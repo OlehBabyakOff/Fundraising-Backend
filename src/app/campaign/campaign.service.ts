@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import { RedisProvider } from 'src/providers/cache/redis.provider';
 
 import { CreateCampaignDTO } from './DTO/create-campaign.dto';
@@ -171,7 +176,7 @@ export class CampaignService {
     } catch (error) {
       console.error('Error while donating:', error.message);
 
-      throw new Error(`Could not donate to campaign: ${error.message}`);
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 }

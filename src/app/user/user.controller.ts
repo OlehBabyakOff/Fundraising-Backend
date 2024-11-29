@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   UseGuards,
   UsePipes,
@@ -33,6 +34,16 @@ export class UserController {
     const wallet = req.user.walletAddress;
 
     const result = await this.userService.getBalance(wallet);
+
+    return result;
+  }
+
+  @Get('transactions')
+  @UseGuards(AccessTokenGuard)
+  async getTransactions(@Req() req, @Query() query) {
+    const wallet = req.user.walletAddress;
+
+    const result = await this.userService.getTransactions(wallet, query);
 
     return result;
   }

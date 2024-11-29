@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { EthersProvider } from '../ethers/ethers.provider';
 import { InjectModel } from '@nestjs/mongoose';
@@ -84,6 +90,8 @@ export class CronjobProvider {
       }
     } catch (error) {
       this.logger.error('Error fetching campaigns', error.stack);
+
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -155,6 +163,8 @@ export class CronjobProvider {
       }
     } catch (error) {
       this.logger.error('Error fetching campaigns', error.stack);
+
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 
@@ -221,6 +231,8 @@ export class CronjobProvider {
       }
     } catch (error) {
       this.logger.error('Error fetching campaigns', error.stack);
+
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
     }
   }
 }
