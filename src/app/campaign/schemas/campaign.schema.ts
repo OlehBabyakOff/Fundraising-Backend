@@ -27,6 +27,9 @@ export class Campaign extends Document {
   @Prop({ required: true })
   endDate: number;
 
+  @Prop({ required: true })
+  transactionHash: string;
+
   @Prop({ default: false })
   isGoalMet: boolean;
 
@@ -57,6 +60,8 @@ export interface ICampaign {
   goalAmount: number;
   totalContributed?: number;
   endDate: number;
+  transactionHash: string;
+
   isGoalMet?: boolean;
   isCampaignEnded?: boolean;
   isReleased?: boolean;

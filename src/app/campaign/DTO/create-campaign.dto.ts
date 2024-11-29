@@ -22,12 +22,24 @@ export const createCampaignSchema = Joi.object({
     'any.required': 'Goal amount is required',
   }),
 
+  image: Joi.string().required(),
+
   endDate: Joi.string().required(),
+
+  campaignAddress: Joi.string().required(),
+
+  creatorAddress: Joi.string().required(),
+
+  transactionHash: Joi.string().required(),
 });
 
 export class CreateCampaignDTO {
   title: string;
   description: string;
   goalAmount: number;
+  image: string;
   endDate: string;
+  campaignAddress: string;
+  creatorAddress: string;
+  transactionHash: string;
 }

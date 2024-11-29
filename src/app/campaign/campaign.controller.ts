@@ -29,15 +29,20 @@ import { DonateDTO, donateSchema } from './DTO/donate.dto';
 export class CampaignController {
   constructor(private readonly campaignService: CampaignService) {}
 
+  @Post('upload-image')
+  @UseGuards(AccessTokenGuard)
+  @FileUpload()
+  async uploadImage(@UploadedFile() file: Express.Multer.File) {
+    const result = await this.campaignService.uploadImage(file);
+
+    return result;
+  }
+
   @Post('create')
   @UseGuards(AccessTokenGuard)
   @UsePipes(new JoiValidationPipe(createCampaignSchema))
-  @FileUpload()
-  async create(
-    @UploadedFile() file: Express.Multer.File,
-    @Body() dto: CreateCampaignDTO,
-  ) {
-    const result = await this.campaignService.create(file, dto);
+  async create(@Body() dto: CreateCampaignDTO) {
+    const result = await this.campaignService.create(dto);
 
     return result;
   }

@@ -24,37 +24,41 @@ export class CampaignService {
     private readonly ethersProvider: EthersProvider,
   ) {}
 
-  async create(
-    file: Express.Multer.File,
-    createCampaignDTO: CreateCampaignDTO,
-  ) {
+  async uploadImage(file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
 
-    const { title, description, goalAmount, endDate } = createCampaignDTO;
-
     const ipfsLink = await this.pinataProvider.uploadFile(file);
 
-    const result = await this.ethersProvider.deployCampaign(
-      title,
-      description,
-      ipfsLink,
-      goalAmount,
-      endDate,
+    return ipfsLink;
+  }
+
+  async create(createCampaignDTO: CreateCampaignDTO) {
+    // const { title, description, goalAmount, endDate } = createCampaignDTO;
+
+    await this.ethersProvider.validateTransactionReceipt(
+      createCampaignDTO.transactionHash,
     );
 
     const newCampaign = await new this.campaignModel({
-      title: createCampaignDTO.title,
-      description: createCampaignDTO.description,
-      goalAmount: createCampaignDTO.goalAmount,
+      ...createCampaignDTO,
       endDate: new Date(createCampaignDTO.endDate).getTime(),
-      image: ipfsLink,
-      campaignAddress: result.campaignAddress,
-      creatorAddress: result.creatorAddress,
     });
 
     return newCampaign.save();
+
+    // const newCampaign = await new this.campaignModel({
+    //   title: createCampaignDTO.title,
+    //   description: createCampaignDTO.description,
+    //   goalAmount: createCampaignDTO.goalAmount,
+    //   endDate: new Date(createCampaignDTO.endDate).getTime(),
+    //   image: ipfsLink,
+    //   campaignAddress: result.campaignAddress,
+    //   creatorAddress: result.creatorAddress,
+    // });
+
+    // return newCampaign.save();
   }
 
   async getList(query) {

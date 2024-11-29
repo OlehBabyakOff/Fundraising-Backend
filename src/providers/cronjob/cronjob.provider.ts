@@ -215,6 +215,10 @@ export class CronjobProvider {
             );
           }
 
+          await this.ethersProvider.resetActiveCampaignStatus(
+            campaign.creatorAddress,
+          );
+
           this.logger.log(
             `Successfully ended campaign: ${campaign.campaignAddress}`,
           );

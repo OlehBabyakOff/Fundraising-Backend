@@ -87,6 +87,34 @@ export class EthersProvider implements OnModuleDestroy {
     return new ethers.Contract(factoryAddress, factoryABI, this.signer);
   }
 
+  async validateTransactionReceipt(
+    transactionHash: string,
+  ): Promise<ethers.TransactionReceipt> {
+    try {
+      const txReceipt =
+        await this.provider.getTransactionReceipt(transactionHash);
+
+      // Validate the receipt
+      if (
+        !txReceipt ||
+        txReceipt.to.toLocaleLowerCase() !==
+          this.configService
+            .get<string>('ETHEREUM.FACTORY_ADDRESS')
+            .toLowerCase()
+      ) {
+        throw new BadRequestException('Не правильна транзакція.');
+      }
+
+      return txReceipt;
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch transaction receipt for hash: ${transactionHash}`,
+        error.stack,
+      );
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   async getBalance(address: string): Promise<string> {
     if (!ethers.isAddress(address)) {
       throw new BadRequestException('Invalid Ethereum address');
@@ -150,6 +178,18 @@ export class EthersProvider implements OnModuleDestroy {
         reject(error);
       }
     });
+  }
+
+  async resetActiveCampaignStatus(creatorAddress: string): Promise<any> {
+    try {
+      await this.factoryContract.resetActiveCampaignStatus(creatorAddress);
+    } catch (error) {
+      this.logger.error(
+        `Failed to reset active status for creator ${creatorAddress}`,
+        error.stack,
+      );
+      throw new HttpException(`${error.message}`, HttpStatus.BAD_REQUEST);
+    }
   }
 
   async getCampaigns(
