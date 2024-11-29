@@ -148,18 +148,18 @@ export class CampaignService {
     return result;
   }
 
-  async donate(address: string, dto: DonateDTO) {
+  async donate(campaignAddress: string, dto: DonateDTO, donorAddress: string) {
     try {
-      const { amount, campaignAddress, transactionHash } = dto;
+      const { amount, transactionHash } = dto;
 
       await this.campaignModel.findOneAndUpdate(
-        { campaignAddress: address },
+        { campaignAddress: campaignAddress },
         { $inc: { totalContributed: amount } },
       );
 
       const newTransaction = await new this.transactionModel({
         campaignAddress: campaignAddress,
-        creatorAddress: address,
+        creatorAddress: donorAddress,
         amount,
         type: 'donation',
         hash: transactionHash,

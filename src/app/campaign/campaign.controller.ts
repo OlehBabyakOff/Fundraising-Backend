@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseGuards,
   UsePipes,
@@ -71,8 +72,12 @@ export class CampaignController {
   @Post('donate/:address')
   @UseGuards(AccessTokenGuard)
   @UsePipes(new JoiValidationPipe(donateSchema))
-  async donate(@Body() dto: DonateDTO, @Param() param) {
-    const result = await this.campaignService.donate(param.address, dto);
+  async donate(@Body() dto: DonateDTO, @Param() param, @Req() req) {
+    const result = await this.campaignService.donate(
+      param.address,
+      dto,
+      req.user.walletAddress,
+    );
 
     return result;
   }
