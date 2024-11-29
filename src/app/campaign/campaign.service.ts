@@ -62,7 +62,7 @@ export class CampaignService {
 
     const [data, total] = await Promise.all([
       this.campaignModel.aggregate([
-        { $match: match },
+        // { $match: match },
         {
           $addFields: {
             timeDifference: {

@@ -8,7 +8,7 @@ export const createCampaignSchema = Joi.object({
     'any.required': 'Title is required',
   }),
 
-  description: Joi.string().min(10).max(500).required().messages({
+  description: Joi.string().min(10).required().messages({
     'string.base': 'Description should be a string',
     'string.min': 'Description should be at least 10 characters long',
     'string.max': 'Description should be at most 500 characters long',
