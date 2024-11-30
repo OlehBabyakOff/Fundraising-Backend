@@ -10,7 +10,7 @@ import { CreateCampaignDTO } from './DTO/create-campaign.dto';
 import { PinataProvider } from 'src/providers/pinata/pinata.provider';
 import { EthersProvider } from 'src/providers/ethers/ethers.provider';
 import { DonateDTO } from './DTO/donate.dto';
-import { pagination } from 'src/common/helpers/pagination.helper';
+import { pagination, search } from 'src/common/helpers/pagination.helper';
 import { ICampaign } from './schemas/campaign.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -50,19 +50,31 @@ export class CampaignService {
   }
 
   async getList(query) {
+    const { sort, filter, search: searchValue } = query;
+
     const { count, skip } = pagination(query);
 
-    const match = { isCampaignEnded: false };
+    const searchRegex = search(searchValue);
 
-    const sort = {
+    const match = {
+      active: { isCampaignEnded: false },
+      finished: { isCampaignEnded: true },
+      all: {},
+    }[filter] || { isCampaignEnded: false };
+
+    if (searchRegex) {
+      match.title = { $regex: searchRegex };
+    }
+
+    const sortParam = {
       popular: { differenceToGoal: 1 },
       ending: { timeDifference: 1 },
       new: { createdAt: -1 },
-    }[query.filter] || { totalContributed: -1 };
+    }[sort] || { totalContributed: -1 };
 
     const [data, total] = await Promise.all([
       this.campaignModel.aggregate([
-        // { $match: match },
+        { $match: match },
         {
           $addFields: {
             timeDifference: {
@@ -75,7 +87,7 @@ export class CampaignService {
             },
           },
         },
-        { $sort: sort },
+        { $sort: sortParam },
         { $skip: skip },
         { $limit: count },
         {
