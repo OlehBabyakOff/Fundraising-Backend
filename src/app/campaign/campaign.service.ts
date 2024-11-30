@@ -11,7 +11,7 @@ import { PinataProvider } from 'src/providers/pinata/pinata.provider';
 import { EthersProvider } from 'src/providers/ethers/ethers.provider';
 import { DonateDTO } from './DTO/donate.dto';
 import { pagination, search } from 'src/common/helpers/pagination.helper';
-import { ICampaign } from './schemas/campaign.schema';
+import { Campaign, ICampaign } from './schemas/campaign.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { ITransaction } from './schemas/transactions.schema';
@@ -63,7 +63,17 @@ export class CampaignService {
     }[filter] || { isCampaignEnded: false };
 
     if (searchRegex) {
-      match.title = { $regex: searchRegex };
+      match.$or = [
+        {
+          title: { $regex: searchRegex },
+        },
+        {
+          creatorAddress: { $regex: searchRegex },
+        },
+        {
+          campaignAddress: { $regex: searchRegex },
+        },
+      ];
     }
 
     const sortParam = {
