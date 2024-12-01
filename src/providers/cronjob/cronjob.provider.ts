@@ -131,6 +131,10 @@ export class CronjobProvider {
           );
 
           if (result) {
+            const amountToRelease = (campaign.totalContributed * 0.95).toFixed(
+              4,
+            );
+
             await Promise.all([
               this.campaignModel.updateOne(
                 { _id: campaign._id },
@@ -140,7 +144,7 @@ export class CronjobProvider {
               new this.transactionModel({
                 campaignAddress: campaign.campaignAddress,
                 creatorAddress: campaign.creatorAddress,
-                amount: campaign.totalContributed,
+                amount: amountToRelease,
                 type: 'release',
                 hash: result.hash,
               }).save(),
