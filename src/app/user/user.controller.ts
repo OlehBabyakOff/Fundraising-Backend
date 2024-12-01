@@ -47,4 +47,14 @@ export class UserController {
 
     return result;
   }
+
+  @Get('my-campaigns')
+  @UseGuards(AccessTokenGuard)
+  async getMyCampaigns(@Req() req, @Query() query) {
+    const wallet = req.user.walletAddress;
+
+    const result = await this.userService.getMyCampaigns(wallet, query);
+
+    return result;
+  }
 }

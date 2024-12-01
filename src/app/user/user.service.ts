@@ -7,11 +7,13 @@ import { EthersProvider } from 'src/providers/ethers/ethers.provider';
 import { ITransaction } from '../campaign/schemas/transactions.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { ICampaign } from '../campaign/schemas/campaign.schema';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel('Transaction') private transactionModel: Model<ITransaction>,
+    @InjectModel('Campaign') private campaignModel: Model<ICampaign>,
     private readonly redisProvider: RedisProvider,
     private readonly ethersProvider: EthersProvider,
   ) {}
@@ -65,6 +67,46 @@ export class UserService {
         },
       ]),
       this.transactionModel.countDocuments(match),
+    ]);
+
+    return {
+      data: data || [],
+      total: total || 0,
+    };
+  }
+
+  async getMyCampaigns(wallet, query) {
+    const { count, skip } = pagination(query);
+
+    const match = {
+      $expr: {
+        $eq: [{ $toLower: '$creatorAddress' }, wallet.toLowerCase()],
+      },
+    };
+
+    const [data, total] = await Promise.all([
+      this.campaignModel.aggregate([
+        { $match: match },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: count },
+        {
+          $project: {
+            campaignAddress: 1,
+            creatorAddress: 1,
+            title: 1,
+            goalAmount: 1,
+            isCampaignEnded: 1,
+            isGoalMet: 1,
+            isReleased: 1,
+            isRefunded: 1,
+            totalContributed: 1,
+            transactionHash: 1,
+            createdAt: 1,
+          },
+        },
+      ]),
+      this.campaignModel.countDocuments(match),
     ]);
 
     return {
