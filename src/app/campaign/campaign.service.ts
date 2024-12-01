@@ -109,6 +109,7 @@ export class CampaignService {
             goalAmount: 1,
             totalContributed: { $round: ['$totalContributed', 2] },
             campaignAddress: 1,
+            isCampaignEnded: 1,
           },
         },
       ]),
@@ -138,6 +139,7 @@ export class CampaignService {
           goalAmount: 1,
           totalContributed: { $round: ['$totalContributed', 2] },
           campaignAddress: 1,
+          isCampaignEnded: 1,
         },
       },
     ]);
